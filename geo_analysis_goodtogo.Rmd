@@ -1,0 +1,82 @@
+---
+output: html_document
+runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(shiny)
+library(tidyverse)
+library(rgdal)
+library(tidyverse)
+library(plotly)
+knitr::opts_chunk$set(
+  fig.width = 6,
+  fig.asp = .6,
+  out.width = "100%"
+)
+```
+
+### Administrative Map of Shanghai
+```{r,warning=F, echo=F,message=F}
+load('data/df_combine.Rdata')
+sh_df <- read.csv('data/sh_df.csv')
+map1 <- sh_df %>%
+      rename(District = id) %>%
+      filter(parameter=='TB_Total') %>%
+      ggplot()+
+      geom_polygon(aes(x = long, y = lat, group = group,fill=District),alpha=.5,
+                   colour = "black")+
+      scale_alpha_manual( guide = "none")+
+      theme_bw()+
+      facet_wrap(~'District' )
+map2 <- sh_df %>%
+      filter(parameter=='TB_Total') %>%
+      mutate(urban = fct_recode(urban, City = 'Urban', Suburb = 'Suburban', Pudong = 'Pudong__New_District')) %>% 
+      rename(City_or_Suburb = urban) %>%
+      ggplot()+
+      geom_polygon(aes(x = long, y = lat, group = group,fill=City_or_Suburb),alpha=.5,
+                   colour = "black")+
+      scale_alpha_manual( guide = "none")+
+      theme_bw()+
+      facet_wrap(~'City/Suburb' )
+
+maps <- subplot(style(map1, showlegend = FALSE),style(map2, showlegend = F),
+                margin = 0.05,titleX = F,titleY = F)
+maps
+```
+
+### Geo Analytics for Different Parameters
+
+
+```{r eruptions, echo=FALSE,warning=FALSE}
+
+
+ choice=  sh_df %>% distinct(parameter) %>% pull()
+
+ sidebarLayout(
+
+     sidebarPanel(
+       inputPanel(radioButtons("Parameter", label = h3("Parameters"),
+                 choices = choice, selected = "TB_Total")
+ )
+
+     ),
+
+     # Show a plot of the generated distribution
+     mainPanel(
+       renderPlotly({
+     map <- sh_df%>%
+       rename(District = id) %>%
+       filter(parameter == input$Parameter) %>%
+       ggplot()+
+       theme_bw()+
+       geom_polygon(aes(x = long, y = lat, group = group,fill=value),alpha = .5,
+                    colour = "black")
+     ggplotly(map)
+       }
+     )
+   )
+ )
+```
