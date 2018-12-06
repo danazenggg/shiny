@@ -217,6 +217,7 @@ df_combine%>%
   select(district, or = estimate, ci_low = "X2.5..", ci_high = "X97.5..") %>% 
   mutate(or = exp(or), ci_low = exp(ci_low), ci_high = exp(ci_high), district = fct_reorder(district, or)) %>% 
   ggplot(aes(x = district, y = or)) + 
+    theme_classic()+
   geom_point() + 
   geom_errorbar(aes(ymin = ci_low, ymax = ci_high)) +
   labs(
@@ -225,7 +226,6 @@ df_combine%>%
     y = "The estimated ORs and CIs"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_classic()+
   scale_y_continuous(limits=c(0, 4))
 ```
 
