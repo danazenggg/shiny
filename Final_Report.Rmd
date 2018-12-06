@@ -265,7 +265,7 @@ df_combine %>%
 This plots shows the range of initial glucose level of different genders. The red box represents the individuals without tuberculosis while the green box represents the ones who have the disease. The median and the third quartiles of the initial glucose level are higher in TB individuals than those of samples without TB.
 
 
-### Drug Usage level
+### Drug Usage Level
 
 
 Visualizing the total observation of each drug level by gender

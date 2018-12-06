@@ -165,6 +165,8 @@ After the first step of analysis of the data set, we decided to mainly focus on 
 
 ### Descriptive Statistics for TB Incidence
 
+Calculating the total person-years and subsetting the data by gender and calculating incidence rate separately.
+
 ``` r
 df_descrip = df_combine %>% 
   filter(district != "") %>% 
@@ -197,7 +199,7 @@ With an average following-up period of 3.8440697 year (range: 0 to 10.9616438 ye
 
 ### Glucose Management and TB Incidence Analysis
 
-Grouping the data by district, and calculatiing the OR and CI for each district
+Grouping the data by district, and calculatiing the OR and CI for each district.
 
 ``` r
 df_combine%>% 
@@ -232,6 +234,8 @@ We explored whether diabetes who regularly monitor glucose can reduce the risk o
 
 ### Initial BMI
 
+Visualizing the gender and initial\_BMI by TB ststus.
+
 ``` r
 df_combine %>% 
   ggplot(aes(x = gender, y = bmi_initial, fill = tb)) +
@@ -243,7 +247,9 @@ df_combine %>%
 
 This plots shows the range of initial glucose level of different genders. The red box represents the individuals without tuberculosis while the green box represents the ones who have the disease. The median and the third quartiles of the initial glucose level are higher in TB individuals than those of samples without TB.
 
-### Drug Usage level
+### Drug Usage Level
+
+Visualizing the total observation of each drug level by gender
 
 ``` r
 df_drug = df_combine %>% 
@@ -270,6 +276,8 @@ This drug plot is showing that among all the people with Type II diabetes, Femal
 
 ### Complications Level
 
+Visualizing number of complications and age by gender
+
 ``` r
 df_complication <- df_combine %>% 
   mutate(retina = as.numeric(retina),
@@ -294,6 +302,8 @@ ggplot(df_complication, aes(x = complications, y = dmage, hue = gender)) +
 This plot shows the number of complications among poeple with Type II Diabetes in different ages and different genders. The Y axis shows age while X axis shows the number of complications that each sample has. We could see that number of complications is similar distributed among participants from different age and different gender.
 
 ### Daily Exercise Level
+
+Visualizing how exercise change across age by city/suburb status
 
 ``` r
 df_exercise = df_combine %>% 
@@ -328,6 +338,7 @@ We further created a shiny app to display different paramter distributions in ea
 
 ``` r
 sh_df <- read.csv('data/sh_df.csv')
+### Making two plotly shanghai maps
 map1 <- sh_df %>%
       rename(District = id) %>%
       filter(parameter=='TB_Total') %>%
@@ -387,6 +398,8 @@ Additional analysis
 
 ### Cox Regression
 
+Mutating variables to desired classes fitting them to the Cox Model
+
 ``` r
 df_cox <- df_combine %>% 
   mutate(age = 2018-as.numeric(birthyear)) %>% 
@@ -433,19 +446,45 @@ In the multivariate Cox analysis, the all covariates remain significant (p &lt; 
 
 To further visualize how different risk factors affect the time of getting TB among T2DM people, we used Kaplan-Meier estimator to estimate the survival function and drew Kaplan–Meier survival curves. In this function, the event is developing TB. From the curve, gender and drug have effects on the probability of getting TB while exercise and complication have no significant effect. The result is showed by shiny, and the output can be reached at [here](https://dmvstb.shinyapps.io/survivalanalysis/) .
 
-##### The code is here:
+##### The code is shown below:
 
 ``` r
-df_combine$survival = with(df_combine, Surv(days, tb == "Yes"))
+library(flexdashboard)
+library(shiny)
+library(p8105.datasets)
+library(plotly)
+library(tidyverse)
+library(viridis)
+library(survivalAnalysis)
+library(survminer)
+library(survival)
+library(flexdashboard)
+library(dplyr)
 
-df_combine <- df_combine %>% 
-  head(10)
+### Getting the parameters for widgets
+load('./df_combine.RData')
 
-risk_vectors <- c("drug","gender")
-district_vectors <- c("A","B","C")
+df_combine<-df_combine %>% 
+  mutate(district = as.character(district),
+         district = fct_collapse(district, Huangpu = '310101', 
+                                 Xuhui = '310104', Changning = c('310105', '310106'), 
+                                 Putuo = '310107', Zhabei = '310108', 
+                                 Hongkou = '310109', Yangpu = '310110', 
+                                 Minhang = '310112', Baoshan = '310113',  
+                                 Pudong = c('310115', '310119'), Jiading = '310114', 
+                                 Jinshan = '310116', Songjiang = '310117', 
+                                 Qingpu = '310118', Fengxian = '310120', 
+                                 Chongming = '310230'))
+
+risk_vectors <- c("By Gender","By Drug Level",
+                  "By Complications Level","By Exercise Level")
+district_vectors <- c("Huangpu", "Xuhui", "Changning","Putuo","Zhabei","Hongkou",
+                      "Yangpu","Minhang","Baoshan","Pudong","Jiading","Jinshan","Songjiang",
+                      "Qingpu","Fengxian","Chongming")
 
 
-# Define UI for application that draws a histogram
+
+# Defining the widges 
 ui <- fluidPage(
    
    # Application title
@@ -454,8 +493,11 @@ ui <- fluidPage(
      selectInput("risk_factor", label = h3("Risk Factors"),
                  choices = risk_vectors, selected = "Manhattan"),
      
-     selectInput("district_vector", label = h3("Select District"),
-                 choices = district_vectors, selected = "A")
+     selectInput("district_factor", label = h3("District"),
+                 choices = district_vectors, selected = "Huangpu"),
+ 
+     sliderInput("age_range", label = h3("Choose age range"), min = 1, 
+                 max = 100, value = c(10, 100))
    ),
    mainPanel(
      plotOutput('plot1')
@@ -463,25 +505,48 @@ ui <- fluidPage(
    
 )
 
-# Define server logic required to draw a histogram
+# generating the interactive KM-plots
 server <- function(input, output) {
+  
+  
   output$plot1 <- renderPlot(
-    if(input$risk_factor=="gender"){
-      km =  survfit(survival ~ gender, data = df_combine, conf.type = "log-log")
-      ggsurvplot(km, 
-                 data = df_combine, 
-                 risk.table = F, 
-                 pval = T, 
-                 ylab = paste0("o","1"), 
-                 ylim = c(0.9, 1.0))
-    }else{
-      km =  survfit(survival ~ drug, data = df_combine, conf.type = "log-log")
-      ggsurvplot(km, 
-                 data = df_combine, 
-                 risk.table = F, 
-                 pval = T, 
-                 ylab = paste0("o","1"), 
-                 ylim = c(0.9, 1.0))
+    
+    if(input$risk_factor=="By Gender"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=gender) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Drug Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=drug) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Complications Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=complications) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Exercise Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>%  
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=exercise) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
     }
   )
 }
@@ -493,7 +558,7 @@ shinyApp(ui = ui, server = server)
 Discussion:
 -----------
 
-In this project, we explored how covaraites predicted the survival rate by conducting a Cox regression and constructing Kaplan–Meier curves as the main reult, in addition to a geo-analytics as a by-product. Among males, the incident rate of TB was 224.207 per 100 000 person-years while for female the incident rate is 51.345 per 100 000 person-years. We fitted the Cox regression with covariates of complications, exercise, age, drug, and gender. The p-value for all three overall tests (likelihood, Wald, and score) are significant, indicating that the model is significant and all the factors matters in the model, which is consistant with our expectations. From Kaplan-Meier survival curves, we find out that genders, drug levels and exercises levels have significant effects on the probability of getting TB while complications have no significant effect.
+In this project, we explored how covaraites predicted the survival rate by conducting a Cox regression and constructing Kaplan–Meier curves as the main reult, in addition to a geo-analytics as a by-product. Among males, the incident rate of TB was 224.207 per 100 000 person-years while for female the incident rate is 51.345 per 100 000 person-years. We fitted the Cox regression with covariates of complications, exercise, age, drug, and gender. The p-value for all three overall tests (likelihood, Wald, and score) were significant, indicating that the model was significant and all the factors matters in the model, which is consistant with our expectations. From Kaplan-Meier survival curves, we found that genders, drug levels and exercises levels had significant effects on the probability of getting TB while complications had no significant effect.
 
 Conclusion:
 -----------
