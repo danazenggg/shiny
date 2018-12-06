@@ -246,7 +246,7 @@ df_combine%>%
     y = "The estimated ORs and CIs"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  theme_bw()+
+  theme_classic()+
   scale_y_continuous(limits=c(0, 4))
 ```
 
