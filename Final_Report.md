@@ -5,20 +5,30 @@ Rui Huang (rh2916) Hanbo Qiu (hq2163) Annie Yu (xy2404) Dana Zeng (dz2399) Coco 
 Motivation
 ----------
 
-Due to rapid urbanizations and lifestyles, type 2 diabetes (T2D) has become one of the most concerning public health issues in China. People with T2D are at risk of multiple complications including blindness, cardiovascular diseases, and becoming more susceptible to infectious diseases. As a result, researchers began to notice a higher tuberculosis (TB) incidence in the T2D positive population. Therefore, we would like to explore the association between TB and T2D and what potential risk factors contribute to this comorbidity, and hopefully, provide recommendations to control or decrease the prevalence of T2D and TB in China.
+Due to rapid urbanizations and lifestyle changes, Type II Diabetes (T2D) has become one of the most concerning public health issues in China. People with T2D are at risk of multiple complications including blindness, cardiovascular diseases, and becoming more susceptible to infectious diseases. As a result, researchers began to notice a higher tuberculosis (TB) incidence in the T2D positive population. Therefore, we would like to explore the incidence rate among people with diabetes and what potential risk factors contribute to this comorbidity, and hopefully, provide recommendations to control or decrease the prevalence of T2D and TB in China.
 
 Related work
 ------------
 
-We referred to a paper which conducted a retrospective cohort study in Shanghai, China. (Qiu, Shi et al. 2017) It calculated the incident rate and risk factors for tuberculosis among patients with type 2 diabetes. We explored some variables which have proved to be related to the risk of tuberculosis based on this paper. Moreover, we browsed WHO website to collect the statistics about diabetes and tuberculosis and the End TB strategy. In data science class, we learned lectures about data wrangling, build website and shiny. We all spared no efforts to apply these coding into our website.
+In Qiu, Shi et al. (2017), a retrospective cohort study in Shanghai, China calculated the incident rate and identified risk factors for tuberculosis among patients with Type II Diabetes. We explored some variables which have proved to be related to the risk of tuberculosis based on this paper. Moreover, we browsed WHO website to collect the statistics about diabetes and tuberculosis and the End TB strategy.
 
 Initial Questions
 -----------------
 
-The planned questions include what’s the incident rate of TB and its associates among adults with type 2 diabetes in Shanghai, China between 2004-2014, and geographical distribution of TB infection among these specific populations. We intend to explore which variables might affect the TB incidence in people with type 2 diabetes. The potential factors would conclude gender, sociodemographic factor (i.e. age at diagnosis of T2D), clinical parameters (BMI, fasting glucose), complications of T2D, choice of antidiabetic medication, mode of exercises and geographical location. Most of these questions were answered in our project. Over the course of the project, we found it’s necessary to further analyze their interaction, like analyzing exercises distribution and glucose management odds ratios in different districts. Also, we come up with a new question that we might further explore the multilevel analysis on TB cases if more data is accessible. For example, we can analyze the individual, street and district levels respectively to check whether there is any difference in influencing the number of TB cases.
+We would like to investigate the incident rate of TB and its associates among adults with type 2 diabetes in Shanghai, China between 2004-2014, and geographical distribution of TB cases among people with diabetes. The potential factors would include gender, sociodemographic factors (i.e. age at diagnosis of T2D), clinical parameters (i.e.fasting glucose), complications of T2D, choice of antidiabetic medication, mode of exercises and geographical location. Most of these questions were answered in our project. Over the course of the project, we found taht it’s necessary to further analyze their interaction, like analyzing exercises distribution and glucose management odds ratios in different districts. Also, we came up with a new question that we might further explore the multilevel analysis on TB cases if more data was accessible. For example, we can analyze the individual, street and district levels respectively to check whether there is any difference in influencing the number of TB cases.
 
 Data Source and Data Cleaning
 -----------------------------
+
+#### Diabetes Dataset Source
+
+The diabetes data was from the Shanghai community-based diabetes management system (SCDMS), which was a diabetes register system operated by the Shanghai Municipal Centers for Disease Control and Prevention (Shanghai-CDC). Tuberculosis data was from Shanghai Municipal TB Surveillance System (SMTSS).SCDMS covers more than 25% of confirmed DM cases in Shanghai identified through the following approaches: community-based DM screenings, routine physical examinations and self-reporting. For confirmed DM cases, in-person interviews were conducted every 3 months after the initial assessment by CHC physicians to collect data on physical examination (including BMI and fasting blood glucose), complications, treatment modalities (categories and forms of medications used), lifestyle factors (including duration and intensity of physical activity in leisure time). The link to downlaod this dataset can be found [here](https://drive.google.com/open?id=1GPXa4-lAR7s1kYu0m6uMAxWKNmOVekh-).
+
+#### Administrative Map Source
+
+We obtained the administrative map from the [ArcGIS website](https://www.arcgis.com/home/item.html?id=105f92bd1fe54d428bea35eade65691b), since the administrative region of Shanghai is not included in the ggmap package. We converted the original shapefile to a data frame of longitude, latitude and administrative district. We joined this data frame to our data and showed the distribution of different parameters in each district. The link to downlaod this shipfile can be found [here](https://drive.google.com/open?id=1GPXa4-lAR7s1kYu0m6uMAxWKNmOVekh-).
+
+#### Data cleaning
 
 Renaming chinese variables in English and mutate vairables to desired format for data analysis
 
@@ -92,8 +102,64 @@ df_combine = dm_base %>%
 #save(df_combine,file = './data/df_combine.RData')
 ```
 
-Exploratory analysis and discussion
------------------------------------
+Converting shapefiles to data frame and join to the parameter data frame.
+
+``` r
+sh <- readOGR('data/shanghai_shapefile/shang_dis_merged.shp',verbose = F)
+sh@data <- sh@data %>% 
+  mutate(Name = as.factor(Name)) %>%
+  mutate(Name = fct_recode(Name, Jiading = '嘉定区',
+                           Fengxian = '奉贤区',
+                           Baoshan = '宝山区',
+                           Chongming = '崇明县',
+                           Xuhui = '徐汇区',
+                           Putuo ='普陀区',
+                           Yangpu = '杨浦区',
+                           Songjiang = '松江区',
+                           Pudong='浦东新区',
+                           Hongkou = '虹口区',
+                           Jinshan = '金山区',
+                           Changning = '长宁区',
+                           Minhang = '闵行区',
+                           Zhabei = '闸北区',
+                           Qingpu = '青浦区', 
+                           Huangpu = '黄浦区'))
+sh_df <- broom::tidy(sh, region='Name')
+sh_df <- sh_df %>%
+  mutate(urban = as.factor(id))%>% 
+  mutate(urban = fct_collapse(urban, 
+                              Urban = c('Changning','Hongkou','Huangpu','Putuo','Xuhui','Yangpu','Zhabei'),
+                              Suburban =  c('Baoshan','Jiading','Jinshan','Minhang','Chongming','Qingpu','Songjiang','Fengxian'),
+                              Pudong__New_District = 'Pudong'))
+x <- df_combine %>% 
+  filter(district != "") %>% 
+  mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+         tb=as.character(tb),
+         tb=as.numeric(tb),
+         district = as.character(district),
+         district = fct_collapse(district, Huangpu = '310101', Xuhui = '310104', Changning = c('310105', '310106'), Putuo = '310107', Zhabei = '310108', Hongkou = '310109', Yangpu = '310110', Minhang = '310112', Baoshan = '310113',  Pudong = c('310115', '310119'), Jiading = '310114', Jinshan = '310116', Songjiang = '310117', Qingpu = '310118', Fengxian = '310120', Chongming = '310230'),
+         exercise = as.numeric(as.character(exercise)),
+         complications = as.numeric(as.character(complications)))%>% 
+  group_by(district) %>% 
+  summarise(TB_Total = sum(tb),
+            TB_Incidence = TB_Total/n(),
+            Exercise_Frequency = mean(exercise),
+            Complications = mean(complications),
+            BMI_Change = mean(bmi_change,na.rm = T),
+            Glucose_Average = mean(glu_average),
+            Glucose_Measure_Frequency = mean(celiangxtgl),
+            Medication = mean(drug)) %>% 
+  rename(id = district)
+
+sh_df <- sh_df %>% 
+  inner_join(x,by='id') %>% 
+  gather(TB_Total:Medication, key=parameter, value=value)
+
+#write.csv(sh_df,'data/sh_df.csv')
+```
+
+Exploratory analysis
+--------------------
 
 After the first step of analysis of the data set, we decided to mainly focus on four main risk factors: glucose level, drug usage level, complications level, and daily exercise level. When doing the analysis, for each risk factors, we looked for the different distributions of different levels by gender, by district, and by age. Because we are investigating the incidence of tuberculosis among Type II diabetes patients, we also analyzed the odds of tuberculosis in different levels of risk factors. We have explored histograms, density plot and odds ratio comparing plot to analyze different distributions. Our final result is shown in the K-M survival plot, which will be discussed later.
 
@@ -160,7 +226,7 @@ df_combine%>%
   scale_y_continuous(limits=c(0, 4))
 ```
 
-![](Final_Report_files/figure-markdown_github/unnamed-chunk-3-1.png)
+![](Final_Report_files/figure-markdown_github/unnamed-chunk-4-1.png)
 
 We explored whether diabetes who regularly monitor glucose can reduce the risk of having TB in urban or rural areas. For each district in Shanghai, we obtained the estimate and confidence interval of the adjusted odds ratio for having TB comparing diabetes who regularly monitor glucose to those who don't monitor glucose regularly keeping all other variables fixed. The results show Huangpu district has the highest OR and Baoshan district has the lowest OR.
 
@@ -173,9 +239,9 @@ df_combine %>%
   scale_y_continuous(limits=c(0, 40))
 ```
 
-![](Final_Report_files/figure-markdown_github/unnamed-chunk-4-1.png)
+![](Final_Report_files/figure-markdown_github/unnamed-chunk-5-1.png)
 
-We found that median and quartiles are higher in non-TB patients than in TB patients.
+This plots shows the range of initial glucose level of different genders. The red box represents the individuals without tuberculosis while the green box represents the ones who have the disease. The median and the third quartiles of the initial glucose level are higher in TB individuals than those of samples without TB.
 
 ### Drug Usage level
 
@@ -198,7 +264,7 @@ p2 <- df_drug %>%
 p2
 ```
 
-![](Final_Report_files/figure-markdown_github/unnamed-chunk-5-1.png)
+![](Final_Report_files/figure-markdown_github/unnamed-chunk-6-1.png)
 
 This drug plot is showing that among all the people with Type II diabetes, Females are more likely to following medical orders to take medicines. The x axis shows the kinds of medicine that drug using, while y axis is the number of people.
 
@@ -223,7 +289,7 @@ ggplot(df_complication, aes(x = complications, y = dmage, hue = gender)) +
   ggtitle('The Violin Plot of Age and Complications by Gender')
 ```
 
-![](Final_Report_files/figure-markdown_github/unnamed-chunk-6-1.png)
+![](Final_Report_files/figure-markdown_github/unnamed-chunk-7-1.png)
 
 This plot shows the number of complications among poeple with Type II Diabetes in different ages and different genders. The Y axis shows age while X axis shows the number of complications that each sample has. We could see that number of complications is similar distributed among participants from different age and different gender.
 
@@ -250,69 +316,13 @@ plot_exer = df_exercise %>%
 plot_exer
 ```
 
-![](Final_Report_files/figure-markdown_github/unnamed-chunk-7-1.png)
+![](Final_Report_files/figure-markdown_github/unnamed-chunk-8-1.png)
 
-We compare the average exercise level between geographical distribution and found that the average exercise level for urban is slightly lower than rural. As age increases, the average exercise level increases first then decreases.
+This plots shows the distribution of exercise amount along with different ages. Between age 25 to 80, which represents the most of samples, people from rural district has more exercise amout than urban people. The noise within below 25 range and above 80 range is probabily because the number of samples from these two ranges are too small to show a trend.
 
 ### Geo Analysis
 
 We further created a shiny app to display different paramter distributions in each district in Shanghai with an intuitional geographical visualization. For example, how many total TB cases are in each district, are they suburban or urban districts, etc. The parameters include: TB\_Total, TB\_incidence,Exercise\_Frequency,Complications,BMI\_Change,Glucose\_Average,Glucose\_Measure\_Frequency, and Medication. The map is showed by shiny, which can be reached at [here](https://danazenggg-p8105.shinyapps.io/geo_analysis_goodtogo/). The code we used is shown below:
-
-##### Converting shapefiles to data frame and join to the parameter data frame.
-
-``` r
-sh <- readOGR('data/shanghai_shapefile/shang_dis_merged.shp',verbose = F)
-sh@data <- sh@data %>% 
-  mutate(Name = as.factor(Name)) %>%
-  mutate(Name = fct_recode(Name, Jiading = '嘉定区',
-                           Fengxian = '奉贤区',
-                           Baoshan = '宝山区',
-                           Chongming = '崇明县',
-                           Xuhui = '徐汇区',
-                           Putuo ='普陀区',
-                           Yangpu = '杨浦区',
-                           Songjiang = '松江区',
-                           Pudong='浦东新区',
-                           Hongkou = '虹口区',
-                           Jinshan = '金山区',
-                           Changning = '长宁区',
-                           Minhang = '闵行区',
-                           Zhabei = '闸北区',
-                           Qingpu = '青浦区', 
-                           Huangpu = '黄浦区'))
-sh_df <- broom::tidy(sh, region='Name')
-sh_df <- sh_df %>%
-  mutate(urban = as.factor(id))%>% 
-  mutate(urban = fct_collapse(urban, 
-                              Urban = c('Changning','Hongkou','Huangpu','Putuo','Xuhui','Yangpu','Zhabei'),
-                              Suburban =  c('Baoshan','Jiading','Jinshan','Minhang','Chongming','Qingpu','Songjiang','Fengxian'),
-                              Pudong__New_District = 'Pudong'))
-x <- df_combine %>% 
-  filter(district != "") %>% 
-  mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
-         tb=as.character(tb),
-         tb=as.numeric(tb),
-         district = as.character(district),
-         district = fct_collapse(district, Huangpu = '310101', Xuhui = '310104', Changning = c('310105', '310106'), Putuo = '310107', Zhabei = '310108', Hongkou = '310109', Yangpu = '310110', Minhang = '310112', Baoshan = '310113',  Pudong = c('310115', '310119'), Jiading = '310114', Jinshan = '310116', Songjiang = '310117', Qingpu = '310118', Fengxian = '310120', Chongming = '310230'),
-         exercise = as.numeric(as.character(exercise)),
-         complications = as.numeric(as.character(complications)))%>% 
-  group_by(district) %>% 
-  summarise(TB_Total = sum(tb),
-            TB_Incidence = TB_Total/n(),
-            Exercise_Frequency = mean(exercise),
-            Complications = mean(complications),
-            BMI_Change = mean(bmi_change,na.rm = T),
-            Glucose_Average = mean(glu_average),
-            Glucose_Measure_Frequency = mean(celiangxtgl),
-            Medication = mean(drug)) %>% 
-  rename(id = district)
-
-sh_df <- sh_df %>% 
-  inner_join(x,by='id') %>% 
-  gather(TB_Total:Medication, key=parameter, value=value)
-
-#write.csv(sh_df,'data/sh_df.csv')
-```
 
 ##### Shiny App code for Administrative Map of Shanghai and Geo-Analysis
 
@@ -479,6 +489,11 @@ server <- function(input, output) {
 # Run the application 
 shinyApp(ui = ui, server = server)
 ```
+
+Discussion:
+-----------
+
+In this project, we explored how covaraites predicted the survival rate by conducting a Cox regression and constructing Kaplan–Meier curves as the main reult, in addition to a geo-analytics as a by-product. Among males, the incident rate of TB was 224.207 per 100 000 person-years while for female the incident rate is 51.345 per 100 000 person-years. We fitted the Cox regression with covariates of complications, exercise, age, drug, and gender. The p-value for all three overall tests (likelihood, Wald, and score) are significant, indicating that the model is significant and all the factors matters in the model, which is consistant with our expectations. From Kaplan-Meier survival curves, we find out that genders, drug levels and exercises levels have significant effects on the probability of getting TB while complications have no significant effect.
 
 Conclusion:
 -----------

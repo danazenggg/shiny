@@ -2,6 +2,7 @@
 title: "The Incidence Rate of Tuberculosis among People with Type II Diabetes in Shanghai, China"
 author: "Rui Huang (rh2916)  Hanbo Qiu (hq2163)  Annie Yu (xy2404)  Dana Zeng (dz2399) Coco Zou (xz2809)" 
 output: github_document
+  
 ---
 
 ```{r setup, include=FALSE}
@@ -29,15 +30,15 @@ library(dplyr)
 
 ## Motivation
 
-Due to rapid urbanizations and lifestyles, type 2 diabetes (T2D) has become one of the most concerning public health issues in China. People with T2D are at risk of multiple complications including blindness, cardiovascular diseases, and becoming more susceptible to infectious diseases. As a result, researchers began to notice a higher tuberculosis (TB) incidence in the T2D positive population. Therefore, we would like to explore the association between TB and T2D and what potential risk factors contribute to this comorbidity, and hopefully, provide recommendations to control or decrease the prevalence of T2D and TB in China.
+Due to rapid urbanizations and lifestyle changes, Type II Diabetes (T2D) has become one of the most concerning public health issues in China. People with T2D are at risk of multiple complications including blindness, cardiovascular diseases, and becoming more susceptible to infectious diseases. As a result, researchers began to notice a higher tuberculosis (TB) incidence in the T2D positive population. Therefore, we would like to explore the incidence rate among people with diabetes and what potential risk factors contribute to this comorbidity, and hopefully, provide recommendations to control or decrease the prevalence of T2D and TB in China.
 
 ## Related work
 
-We referred to a paper which conducted a retrospective cohort study in Shanghai, China. (Qiu, Shi et al. 2017) It calculated the incident rate and risk factors for tuberculosis among patients with type 2 diabetes. We explored some variables which have proved to be related to the risk of tuberculosis based on this paper. Moreover, we browsed WHO website to collect the statistics about diabetes and tuberculosis and the End TB strategy. In data science class, we learned lectures about data wrangling, build website and shiny. We all spared no efforts to apply these coding into our website.
+In Qiu, Shi et al. (2017), a retrospective cohort study in Shanghai, China calculated the incident rate and identified risk factors for tuberculosis among patients with Type II Diabetes. We explored some variables which have proved to be related to the risk of tuberculosis based on this paper. Moreover, we browsed WHO website to collect the statistics about diabetes and tuberculosis and the End TB strategy.
 
 ## Initial Questions
 
-The planned questions include what’s the incident rate of TB and its associates among adults with type 2 diabetes in Shanghai, China between 2004-2014, and geographical distribution of TB infection among these specific populations. We intend to explore which variables might affect the TB incidence in people with type 2 diabetes. The potential factors would conclude gender, sociodemographic factor (i.e. age at diagnosis of T2D), clinical parameters (BMI, fasting glucose), complications of T2D, choice of antidiabetic medication, mode of exercises and geographical location. Most of these questions were answered in our project. Over the course of the project, we found it’s necessary to further analyze their interaction, like analyzing exercises distribution and glucose management odds ratios in different districts. Also, we come up with a new question that we might further explore the multilevel analysis on TB cases if more data is accessible. For example, we can analyze the individual, street and district levels respectively to check whether there is any difference in influencing the number of TB cases.
+We would like to investigate the incident rate of TB and its associates among adults with type 2 diabetes in Shanghai, China between 2004-2014, and geographical distribution of TB cases among people with diabetes. The potential factors would include gender, sociodemographic factors (i.e. age at diagnosis of T2D), clinical parameters (i.e.fasting glucose), complications of T2D, choice of antidiabetic medication, mode of exercises and geographical location. Most of these questions were answered in our project. Over the course of the project, we found taht it’s necessary to further analyze their interaction, like analyzing exercises distribution and glucose management odds ratios in different districts. Also, we came up with a new question that we might further explore the multilevel analysis on TB cases if more data was accessible. For example, we can analyze the individual, street and district levels respectively to check whether there is any difference in influencing the number of TB cases.
 
 ## Data Source and Data Cleaning
 
@@ -51,7 +52,7 @@ We obtained the administrative map from the [ArcGIS website](https://www.arcgis.
 
 
 
-
+#### Data cleaning
 Renaming chinese variables in English and mutate vairables to desired format for data analysis
 ```{r, warning = F, message = F}
 load('./dm.RData')
@@ -186,6 +187,7 @@ After the first step of analysis of the data set, we decided to mainly focus on 
 
 ### Descriptive Statistics for TB Incidence
 
+Calculating the total person-years and subsetting the data by gender and calculating incidence rate separately.
 ```{r, warning = F, message = F,}
 df_descrip = df_combine %>% 
   filter(district != "") %>% 
@@ -219,7 +221,7 @@ With an average following-up period of `r mean(df_descrip$days)/365` year (range
 
 ### Glucose Management and TB Incidence Analysis
 
-Grouping the data by district, and calculatiing the OR and CI for each district
+Grouping the data by district, and calculatiing the OR and CI for each district.
 ```{r, warning = F, message = F}
 df_combine%>% 
   mutate(urban_rural = as.factor(urban_rural)) %>% 
@@ -252,6 +254,7 @@ We explored whether diabetes who regularly monitor glucose can reduce the risk o
 
 ### Initial BMI 
 
+Visualizing the gender and initial_BMI by TB ststus.
 ```{r, warning = F, message = F}
 df_combine %>% 
   ggplot(aes(x = gender, y = bmi_initial, fill = tb)) +
@@ -264,6 +267,8 @@ This plots shows the range of initial glucose level of different genders. The re
 
 ### Drug Usage level
 
+
+Visualizing the total observation of each drug level by gender
 ```{r, warning = F, message = F}
 df_drug = df_combine %>% 
   select(contains("drug"),censer,urban_rural,dmage,gender) 
@@ -289,6 +294,8 @@ This drug plot is showing that among all the people with Type II diabetes, Femal
 
 ### Complications Level
 
+
+Visualizing number of complications and age by gender
 ```{r, warning = F, message = F}
 df_complication <- df_combine %>% 
   mutate(retina = as.numeric(retina),
@@ -313,6 +320,7 @@ This plot shows the number of complications among poeple with Type II Diabetes i
 
 ### Daily Exercise Level
 
+Visualizing how exercise change across age by city/suburb status
 ```{r, warning = F, message = F}
 df_exercise = df_combine %>% 
   mutate(exercise = as.numeric(exercise),
@@ -346,6 +354,7 @@ We further created a shiny app to display different paramter distributions in ea
 #####  Shiny App code for Administrative Map of Shanghai and Geo-Analysis
 ```{r, eval=F}
 sh_df <- read.csv('data/sh_df.csv')
+### Making two plotly shanghai maps
 map1 <- sh_df %>%
       rename(District = id) %>%
       filter(parameter=='TB_Total') %>%
@@ -405,6 +414,7 @@ choice=  sh_df %>% distinct(parameter) %>% pull()
 
 ### Cox Regression
 
+Mutating variables to desired classes fitting them to the Cox Model
 ```{r, warning = F, message = F}
 df_cox <- df_combine %>% 
   mutate(age = 2018-as.numeric(birthyear)) %>% 
@@ -441,19 +451,45 @@ In the multivariate Cox analysis, the all covariates remain significant (p < 0.0
 To further visualize how different risk factors affect the time of getting TB among T2DM people, we used Kaplan-Meier estimator to  estimate the survival function and drew Kaplan–Meier survival curves. In this function, the event is developing TB. From the curve, gender and drug have effects on the probability of getting TB while exercise and complication have no significant effect. The result is showed by shiny, and the output can be reached at [here](https://dmvstb.shinyapps.io/survivalanalysis/) .
 
 
-##### The code is here:
+##### The code is shown below:
 
 ```{r, eval = F}
-df_combine$survival = with(df_combine, Surv(days, tb == "Yes"))
+library(flexdashboard)
+library(shiny)
+library(p8105.datasets)
+library(plotly)
+library(tidyverse)
+library(viridis)
+library(survivalAnalysis)
+library(survminer)
+library(survival)
+library(flexdashboard)
+library(dplyr)
 
-df_combine <- df_combine %>% 
-  head(10)
+### Getting the parameters for widgets
+load('./df_combine.RData')
 
-risk_vectors <- c("drug","gender")
-district_vectors <- c("A","B","C")
+df_combine<-df_combine %>% 
+  mutate(district = as.character(district),
+         district = fct_collapse(district, Huangpu = '310101', 
+                                 Xuhui = '310104', Changning = c('310105', '310106'), 
+                                 Putuo = '310107', Zhabei = '310108', 
+                                 Hongkou = '310109', Yangpu = '310110', 
+                                 Minhang = '310112', Baoshan = '310113',  
+                                 Pudong = c('310115', '310119'), Jiading = '310114', 
+                                 Jinshan = '310116', Songjiang = '310117', 
+                                 Qingpu = '310118', Fengxian = '310120', 
+                                 Chongming = '310230'))
+
+risk_vectors <- c("By Gender","By Drug Level",
+                  "By Complications Level","By Exercise Level")
+district_vectors <- c("Huangpu", "Xuhui", "Changning","Putuo","Zhabei","Hongkou",
+                      "Yangpu","Minhang","Baoshan","Pudong","Jiading","Jinshan","Songjiang",
+                      "Qingpu","Fengxian","Chongming")
 
 
-# Define UI for application that draws a histogram
+
+# Defining the widges 
 ui <- fluidPage(
    
    # Application title
@@ -462,8 +498,11 @@ ui <- fluidPage(
      selectInput("risk_factor", label = h3("Risk Factors"),
                  choices = risk_vectors, selected = "Manhattan"),
      
-     selectInput("district_vector", label = h3("Select District"),
-                 choices = district_vectors, selected = "A")
+     selectInput("district_factor", label = h3("District"),
+                 choices = district_vectors, selected = "Huangpu"),
+ 
+     sliderInput("age_range", label = h3("Choose age range"), min = 1, 
+                 max = 100, value = c(10, 100))
    ),
    mainPanel(
      plotOutput('plot1')
@@ -471,36 +510,70 @@ ui <- fluidPage(
    
 )
 
-# Define server logic required to draw a histogram
+# generating the interactive KM-plots
 server <- function(input, output) {
+  
+  
   output$plot1 <- renderPlot(
-    if(input$risk_factor=="gender"){
-      km =  survfit(survival ~ gender, data = df_combine, conf.type = "log-log")
-      ggsurvplot(km, 
-                 data = df_combine, 
-                 risk.table = F, 
-                 pval = T, 
-                 ylab = paste0("o","1"), 
-                 ylim = c(0.9, 1.0))
-    }else{
-      km =  survfit(survival ~ drug, data = df_combine, conf.type = "log-log")
-      ggsurvplot(km, 
-                 data = df_combine, 
-                 risk.table = F, 
-                 pval = T, 
-                 ylab = paste0("o","1"), 
-                 ylim = c(0.9, 1.0))
+    
+    if(input$risk_factor=="By Gender"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=gender) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Drug Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=drug) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Complications Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>% 
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=complications) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
+    }else if(input$risk_factor=="By Exercise Level"){
+      df_combine %>%
+        filter(district == input$district_factor,
+               dmage %in% input$age_range[1]:input$age_range[2]) %>%  
+        mutate(tb = fct_recode(tb, '1'= 'Yes', '0'='No'),
+               tb=as.character(tb),
+               tb=as.numeric(tb)) %>% 
+        analyse_survival(vars(days, tb), by=exercise) %>% 
+        kaplan_meier_plot(ylim=c(0.975,1),break.time.by = 300)
     }
   )
 }
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+
 ```
 
 
 
 ## Discussion:
+In this project, we explored how covaraites predicted the survival rate by conducting a Cox regression and constructing Kaplan–Meier curves as the main reult, in addition to a geo-analytics as a by-product. 
+Among males, the incident rate of TB was 224.207 per 100 000 person-years while for female the incident rate is 51.345 per 100 000 person-years.
+We fitted the Cox regression with covariates of complications, exercise, age, drug, and gender. The p-value for all three overall tests (likelihood, Wald, and score) were significant, indicating that the model was significant and all the factors matters in the model, which is consistant with our expectations. 
+From Kaplan-Meier survival curves, we found that genders, drug levels and exercises levels had significant effects on the probability of getting TB while complications had no significant effect.
+
+
+
+
+
 
 
 ## Conclusion:
