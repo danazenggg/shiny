@@ -197,7 +197,7 @@ female_incidence = sum(df_female$tb)/(sum(df_female$days)/365)
 
 With an average following-up period of 3.8440697 year (range: 0 to 10.9616438 years, 785 TB cases were recorded among 170381 T2DM patients from 6.549564310^{5} person-years follow-up. The overall incident rate of TB was 119.8553004 per 100 000 person-years with 224.2033743 per 100 000 person-years for men, and 51.3442211 per 100 000 person-years for women.
 
-### Glucose Management and TB Incidence Analysis
+### Glucose Management And TB Incidence Analysis
 
 Grouping the data by district, and calculatiing the OR and CI for each district.
 

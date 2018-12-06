@@ -219,7 +219,7 @@ female_incidence = sum(df_female$tb)/(sum(df_female$days)/365)
 
 With an average following-up period of `r mean(df_descrip$days)/365` year (range: `r min(df_descrip$days)/365` to `r max(df_descrip$days)/365` years, `r sum(df_descrip$tb)` TB cases were recorded among `r nrow(df_descrip)` T2DM patients from `r sum(df_descrip$days)/365` person-years follow-up. The overall incident rate of TB was `r 100000*(sum(df_descrip$tb)/(sum(df_descrip$days)/365))` per 100 000 person-years with `r 100000*(sum(df_male$tb)/(sum(df_male$days)/365))` per 100 000 person-years for men, and `r 100000*(sum(df_female$tb)/(sum(df_female$days)/365))` per 100 000 person-years for women.
 
-### Glucose Management and TB Incidence Analysis
+### Glucose Management And TB Incidence Analysis
 
 Grouping the data by district, and calculatiing the OR and CI for each district.
 ```{r, warning = F, message = F}
