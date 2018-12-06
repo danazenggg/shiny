@@ -225,6 +225,7 @@ df_combine%>%
     y = "The estimated ORs and CIs"
   ) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  theme_bw()+
   scale_y_continuous(limits=c(0, 4))
 ```
 
@@ -240,6 +241,9 @@ Visualizing the gender and initial\_BMI by TB ststus.
 df_combine %>% 
   ggplot(aes(x = gender, y = bmi_initial, fill = tb)) +
   geom_boxplot() +
+  ylab('Initial_BMI_Level')+
+  xlab('gender')+
+  theme_classic()+
   scale_y_continuous(limits=c(0, 40))
 ```
 
@@ -294,6 +298,7 @@ ggplot(df_complication, aes(x = complications, y = dmage, hue = gender)) +
   stat_summary(fun.y = median, geom = "point", color = "black", size =3)+
   xlab('Number of Complications')+
   ylab('Age')+
+  theme_classic()+
   ggtitle('The Violin Plot of Age and Complications by Gender')
 ```
 
